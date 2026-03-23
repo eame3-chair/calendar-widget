@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calendar Widget</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400&family=DM+Sans:wght@200;300;400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: transparent;
+      --surface: #f5ede9;
+      --ink: #1a1a18;
+      --ink-muted: #9a8880;
+      --accent: #B59259;
+      --accent-light: rgba(181,146,89,0.12);
+      --border: rgba(0,0,0,0.08);
+      --radius: 16px;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .widget {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px 22px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      width: 300px;
+      position: relative;
+    }
+
+    /* Header: month + year + nav arrows */
+    .cal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .cal-month {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      font-weight: 400;
+      color: var(--ink);
+      letter-spacing: -0.01em;
+    }
+
+    .cal-year {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 300;
+      color: var(--ink-muted);
+      margin-left: 8px;
+    }
+
+    .nav-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--accent);
+      font-size: 18px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      transition: background 0.15s;
+      line-height: 1;
+    }
+
+    .nav-btn:hover {
+      background: var(--accent-light);
+    }
+
+    /* Day labels row */
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 2px;
+    }
+
+    .day-label {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      text-align: center;
+      letter-spacing: 0.08em;
+      padding-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .day-label.weekend {
+      color: var(--accent);
+    }
+
+    /* Divider line under day labels */
+    .cal-divider {
+      grid-column: 1 / -1;
+      height: 1px;
+      background: var(--border);
+      margin-bottom: 6px;
+    }
+
+    /* Individual day cells */
+    .day-cell {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 300;
+      color: var(--ink);
+      text-align: center;
+      padding: 5px 0;
+      border-radius: 50%;
+      cursor: default;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      transition: background 0.15s;
+    }
+
+    .day-cell.empty { pointer-events: none; }
+
+    .day-cell.weekend {
+      color: var(--ink-muted);
+    }
+
+    .day-cell.today {
+      background: var(--accent);
+      color: #ffffff;
+      font-weight: 600;
+      border-radius: 50%;
+    }
+
+    .day-cell.other-month {
+      color: rgba(0,0,0,0.18);
+    }
+
+    /* Month/year title left group */
+    .cal-title {
+      display: flex;
+      align-items: baseline;
+      gap: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <div class="cal-header">
+      <div class="cal-title">
+        <span class="cal-month" id="cal-month">March</span>
+        <span class="cal-year" id="cal-year">2026</span>
+      </div>
+      <div>
+        <button class="nav-btn" id="prev-btn">&#8592;</button>
+        <button class="nav-btn" id="next-btn">&#8594;</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+
+  <script>
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const DAYS   = ['S','M','T','W','T','F','S'];
+
+    const today = new Date();
+    let viewYear  = today.getFullYear();
+    let viewMonth = today.getMonth();
+
+    function buildCalendar() {
+      const grid = document.getElementById('cal-grid');
+      grid.innerHTML = '';
+
+      document.getElementById('cal-month').textContent = MONTHS[viewMonth];
+      document.getElementById('cal-year').textContent  = viewYear;
+
+      // Day labels
+      DAYS.forEach((d, i) => {
+        const el = document.createElement('div');
+        el.className = 'day-label' + (i === 0 || i === 6 ? ' weekend' : '');
+        el.textContent = d;
+        grid.appendChild(el);
+      });
+
+      // Divider
+      const divider = document.createElement('div');
+      divider.className = 'cal-divider';
+      grid.appendChild(divider);
+
+      // First day of month & total days
+      const firstDay  = new Date(viewYear, viewMonth, 1).getDay();
+      const totalDays = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+      // Empty cells before first day
+      for (let i = 0; i < firstDay; i++) {
+        const el = document.createElement('div');
+        el.className = 'day-cell empty';
+        grid.appendChild(el);
+      }
+
+      // Day cells
+      for (let d = 1; d <= totalDays; d++) {
+        const el   = document.createElement('div');
+        const dow  = new Date(viewYear, viewMonth, d).getDay();
+        const isToday = d === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
+
+        let cls = 'day-cell';
+        if (dow === 0 || dow === 6) cls += ' weekend';
+        if (isToday) cls += ' today';
+
+        el.className   = cls;
+        el.textContent = d;
+        grid.appendChild(el);
+      }
+    }
+
+    document.getElementById('prev-btn').addEventListener('click', () => {
+      viewMonth--;
+      if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+      buildCalendar();
+    });
+
+    document.getElementById('next-btn').addEventListener('click', () => {
+      viewMonth++;
+      if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+      buildCalendar();
+    });
+
+    buildCalendar();
+  </script>
+</body>
+</html>
